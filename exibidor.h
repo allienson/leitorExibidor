@@ -20,11 +20,11 @@ void printaFieldInfo(ClassFile*);
 void printaMethodInfo(ClassFile*);
 void printaAttributeInfo(ClassFile*);
 void imprimeStringPool(CpInfo*, int);
-void printTopo(int);
-void printBlank(int);
-void printBase(int);
-void printaCabecalho();
-void printLine();
+double hexToDouble(uint32_t, uint32_t);
+void printAccessFlag(uint16_t);
+void printTopo();
+void printBlank();
+void printBase();
 void printSingleLine();
 
 #endif

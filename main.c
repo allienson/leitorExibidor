@@ -19,8 +19,8 @@ char* nomeArquivo;
 int main(int argc, char* argv[]) {
     nomeArquivo = calloc(TAMANHO_ARQUIVO, sizeof(argv[1]));
     
-    printaCabecalho();
-    if (argc < 1) {
+    system("cls");
+    if (argc < 2) {
     	printf("\n\nInsira o caminho do arquivo \".class\" que contem o main:\n");
     	scanf("%s", nomeArquivo);
     	getchar();
