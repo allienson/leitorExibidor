@@ -20,6 +20,8 @@ void printaFieldInfo(ClassFile*);
 void printaMethodInfo(ClassFile*);
 void printaAttributeInfo(ClassFile*);
 void imprimeStringPool(CpInfo*, int);
+void imprimeCode(ClassFile*, CodeAttribute*);
+void imprime_exc(ClassFile*, ExceptionsAttribute*);
 double hexToDouble(uint32_t, uint32_t);
 void printAccessFlag(uint16_t);
 void printTopo();

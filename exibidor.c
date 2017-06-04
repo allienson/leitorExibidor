@@ -33,7 +33,7 @@ void printaClassFile(ClassFile* classFile) {
     printf("\t\tInterfaces Count:      %d\n", classFile->interfacesCount);
     printf("\t\tFields Countd:         %d\n", classFile->fieldsCount);
     printf("\t\tMethods Count:         %d\n", classFile->methodsCount);
-    printf("\t\tAttributes Count:      %d", classFile->attributesCount);
+    printf("\t\tAttributes Count:      %d\n", classFile->attributesCount);
     getchar();
 
     // CONSTANT POOL
@@ -71,7 +71,7 @@ void printaClassFile(ClassFile* classFile) {
     printf("\t%c\t\t   METHOD INFO     \t\t%c\n", 179, 179);
     printBlank();
     printBase();    
-    //printaMethodInfo(classFile);
+    printaMethodInfo(classFile);
     getchar();
     
     // ATTRIBUTE INFO
@@ -195,7 +195,6 @@ void printaCpInfo(ClassFile* classFile) {
                 break;
         }
     }
-    printf("\n\n");
 }
 
 void printaInterfaces(ClassFile* classFile) {
@@ -213,7 +212,6 @@ void printaInterfaces(ClassFile* classFile) {
         printf("\t     !! Esse classe nao possui Interfaces !!");
         printf("\n");
     }   
-    printf("\n\n"); 
 }
 
 void printaFieldInfo(ClassFile* classFile) {    
@@ -254,29 +252,41 @@ void printaFieldInfo(ClassFile* classFile) {
         }
     } else {
         printf("\t      !! Essa classe nao possui Campos !!");
-        printf("\n\n");
     }
 }
 
 void printaMethodInfo(ClassFile* classFile) {
-    printf("MethodInfo: \n");
-    printf("    AccessFlags: %d\n", classFile->methods->accessFlags);
-    printf("    NameIndex: %d\n", classFile->methods->nameIndex);
-    printf("    DescriptorIndex: %d\n", classFile->methods->descriptorIndex);
-    printf("    AttributesCount: %d\n", classFile->methods->attributesCount);
-    printf("    CodeAttribute: \n");
-    printf("        AttributeNameIndex: %d\n", classFile->methods->cdAtrb->attributeNameIndex);
-    printf("        AttributeLength: %d\n", classFile->methods->cdAtrb->attributeLength);
-    printf("        MaxStack: %d\n", classFile->methods->cdAtrb->maxStack);
-    printf("        MaxLocals: %d\n", classFile->methods->cdAtrb->maxLocals);
-    printf("        CodeLength: %d\n", classFile->methods->cdAtrb->codeLength);
-    printf("        Code: %d\n", &classFile->methods->cdAtrb->code);
-    printf("        ExceptionTableLength: %d\n", classFile->methods->cdAtrb->exceptionTableLength);
-    printf("        AttributesCount: %d\n", classFile->methods->cdAtrb->attributesCount);
-    printf("        ExceptionsAttribute: \n");
-    printf("            StartPC: %d\n", classFile->methods->cdAtrb->exceptionTable->startPc);
-    printf("            EndPC: %d\n", classFile->methods->cdAtrb->exceptionTable->endPc);
-    printf("            CatchType: %d\n", classFile->methods->cdAtrb->exceptionTable->catchType);
+    
+    uint16_t name_ind; 
+    uint32_t att_len; 
+    uint16_t methodsCount = classFile->methodsCount; 
+
+    printf("Methods Count: %d\n", classFile->methodsCount);
+    if(methodsCount == 0)
+        return;
+    else{
+        MethodInfo* cp = classFile->methods;
+        for(int i = 0; i < methodsCount; cp++){
+            printf("access_flag: 0x%0x ",cp->accessFlags);
+            printAccessFlag(cp->accessFlags);
+            printf("name_index: cp info #%d ",cp->nameIndex);
+            imprimeStringPool(classFile->constantPool, cp->nameIndex - 1);
+            printf("\n");
+            printf("descriptor_index: cp info #%d ",cp->descriptorIndex);
+            imprimeStringPool(classFile->constantPool, cp->descriptorIndex - 1);
+            printf("\n");
+            printf("attributes_count: %d\n",cp->attributesCount);
+
+            // imprime code 
+            imprimeCode(classFile, cp->cdAtrb);
+
+            // se o metodo tem dois atributos, eh pq um eh code e o outro exceptions
+            if (cp->attributesCount == 2) {
+                imprime_exc(classFile, cp->excAtrb); 
+            }
+            i++;
+        }
+    }
 }
 
 void printaAttributeInfo(ClassFile* classFile) {
@@ -441,6 +451,212 @@ void printAccessFlag(uint16_t accessFlags){
             printf("Transient\n");
         break;
 
+    }
+}
+
+void imprimeCode(ClassFile* classFile, CodeAttribute* cdAtrb) {
+    int opcode, posReferencia; 
+    int bytesPreench, offsets;
+    uint32_t default_v, low, high, npairs, temp; 
+    
+    printf("\n----Code Info----\n");
+    printf("attribute_name_index: cp info #%d ",cdAtrb->attributeNameIndex);
+    imprimeStringPool(classFile->constantPool, cdAtrb->attributeNameIndex - 1);
+    printf("\n");
+    printf("attribute_length: %d\n",cdAtrb->attributeLength);
+
+    // imprime informacoes do stack
+    printf("Tamanho maximo do Stack: %d\n", cdAtrb->maxStack);
+    printf("Numero maximo de variaveis locais: %d\n",cdAtrb->maxLocals);
+    printf("Tamanho do codigo: %d\n", cdAtrb->codeLength);
+
+    // obtem decodificador de instrucoes 
+    Decodificador dec[NUM_INSTRUCAO];
+    inicializaDecodificador(dec); 
+
+    // incrementamos k conforme formos passando no loop
+    for(uint32_t k = 0; k < cdAtrb->codeLength; ) {    
+        // pega opcode da instrucao
+        opcode = cdAtrb->code[k];
+        printf("%d: %s  ", k, dec[opcode].instrucao);
+
+        // toda vez que lemos bytes devemos incrementar k 
+        k++; 
+
+        if (opcode == TABLESWITCH) {
+            // a posicao de referencia eh o label numerico associado a tableswitch 
+            // k - 1 pois ja incrementamos o k para a proxima instrucao 
+            posReferencia = k - 1;
+
+            // pega bytes de preenchimento - nao salva em nenhum lugar
+            //bytesPreench = k % 4;  
+            bytesPreench = (4 - (k % 4)) % 4;  
+            for (int l = 0; l < bytesPreench; l++) {
+                k++; 
+            }
+
+            // pega bytes do target default
+            default_v = 0;
+            for (int l = 0; l < 4; l++) {
+                default_v = (default_v << 4) + cdAtrb->code[k];   
+                k++; 
+            }       
+
+            // pega bytes low
+            low = 0;
+            for (int l = 0; l < 4; l++) {
+                low = (low << 4) + cdAtrb->code[k];   
+                k++; 
+            }       
+
+            // pega bytes high 
+            high = 0;
+            for (int l = 0; l < 4; l++) {
+                high = (high << 4) + cdAtrb->code[k];   
+                k++; 
+            }       
+
+            printf("  de  %d ateh %d\n", low, high);
+
+            // pega bytes de offset 
+            offsets = 1 + high - low;
+            for (int l = 0; l < offsets; l++) {
+                // pega valor do offset atual 
+                temp = 0; 
+                for (int i = 0; i < 4; i++) {
+                    temp = (temp << 4) + cdAtrb->code[k];   
+                    k++; 
+                }
+                printf("\t%d: %d (+%d)\n", l, (posReferencia + temp), temp);
+            } 
+            printf("\tdefault: %d (+%d)\n", (default_v + posReferencia), default_v);
+        
+        } else if (opcode == LOOKUPSWITCH) {
+            // a posicao de referencia eh o label numerico associado a tableswitch 
+            // k - 1 pois ja incrementamos o k para a proxima instrucao 
+            posReferencia = k - 1;
+
+            // pega bytes de preenchimento 
+            //bytesPreench = k % 4;  
+            bytesPreench = (4 - (k % 4)) % 4;  
+            for (int l = 0; l < bytesPreench; l++) {
+                k++; 
+            }
+
+            // pega bytes do target default
+            default_v = 0;
+            for (int l = 0; l < 4; l++) {
+                default_v = (default_v << 4) + cdAtrb->code[k];   
+                k++; 
+            }       
+
+            // pega bytes low
+            npairs = 0;
+            for (int l = 0; l < 4; l++) {
+                npairs = (npairs << 4) + cdAtrb->code[k];   
+                k++; 
+            }       
+
+            printf("  %d\n", npairs);
+
+            // pega npairs 
+            for (uint32_t l = 0; l < npairs; l++) {
+                // pega valor do match atual 
+                temp = 0; 
+                for (int i = 0; i < 4; i++) {
+                    temp = (temp << 8) + cdAtrb->code[k];   
+                    k++; 
+                }
+                printf("\t%d:  ", temp);
+
+                // pega valor do offset 
+                temp = 0; 
+                for (int i = 0; i < 4; i++) {
+                    temp = (temp << 8) + cdAtrb->code[k];   
+                    k++; 
+                }
+                printf("%d (+%d)\n", temp + posReferencia, temp);
+
+            } 
+            printf("\tdefault: %d (+%d)\n", default_v + posReferencia, default_v);
+
+        } else if (opcode == WIDE) {
+            printf("\n");
+
+            // pega opcode que segue
+            opcode = cdAtrb->code[k];
+            k++; 
+
+            // se for um opcode do iload, fload, ...
+            if (opcode == ILOAD || opcode == FLOAD || opcode == ALOAD || opcode == LLOAD || \
+                    opcode == DLOAD || opcode == ISTORE || opcode == FSTORE || opcode == ASTORE || \
+                    opcode == LSTORE || opcode == DSTORE || opcode == RET) {
+
+                printf("%d: %s  ", k - 1, dec[opcode].instrucao);
+
+                // pega index byte1 
+                k++; 
+
+                // pega index byte2
+                k++; 
+                temp = cdAtrb->code[k-2] << 8;
+                temp += cdAtrb->code[k-1];
+                printf(" %u \n", temp);
+            
+            } else if (opcode == IINC) {  // se for um iinc
+                printf("%d: iinc ", k - 1);
+
+                // pega indexbyte1
+                k++; 
+
+                // pega indexbyte2
+                k++; 
+
+                // adiciona o 1 pois comecamos a contar em 1
+                temp = cdAtrb->code[k-2] << 8;
+                temp += cdAtrb->code[k-1];
+                printf(" %u ", temp); 
+
+                // pega constbyte1
+                k++; 
+
+                // pega constbyte2
+                k++; 
+
+                temp = cdAtrb->code[k-2] << 8; 
+                temp += cdAtrb->code[k-1];
+                printf(" por  %u \n", temp); 
+            
+            } else { 
+                // arquivo .class corrompido! 
+                printf("arquivo .class invalido na instrucao wide");
+                exit(1);
+            }
+
+        } else {
+            // obtem quantos operandos a instrucao tem e vai imprimindo operandos
+            int num_bytes = dec[opcode].bytes;
+            for (int l = 0; l < num_bytes; l++) {
+
+                printf("%d  ", cdAtrb->code[k]);
+                if(cdAtrb->code[k] != 0)
+                    imprimeStringPool(classFile->constantPool, cdAtrb->code[k] - 1);
+                // atualiza valor de k 
+                k++;
+            }
+            printf("\n");
+        }
+    }      
+}
+
+void imprime_exc(ClassFile* classFile, ExceptionsAttribute* excAtrb) {
+    printf("\n----Exception Info----\n");
+    printf("attribute_name_index: cp_info_#%d ", excAtrb->attributeNameIndex);
+    imprimeStringPool(classFile->constantPool, excAtrb->attributeNameIndex - 1);
+    printf("\n");
+    printf("# - Excecao\n");
+    for (int k = 0; k < excAtrb->numberExceptions; k++) {
+        printf("%d - %d\n", k, excAtrb->exceptionIndexTable[k]);
     }
 }
 
