@@ -396,9 +396,12 @@ double hexToDouble(uint32_t highBytes, uint32_t lowBytes){
 
 long hexToLong(uint32_t highBytes, uint32_t lowBytes){
     long retorno;
+    long negativo;
+
+    negativo = pow(-1, (highBytes >> 31));
     memcpy(&retorno, &lowBytes, sizeof(uint32_t));
 
-    return retorno;
+    return retorno * negativo;
 }
 
 void printAccessFlag(uint16_t accessFlags){
