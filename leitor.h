@@ -1,10 +1,16 @@
 //
 //  leitor.h
-//  LeitorExibidor
+//  LeitorExibidor - Software Basico 2017-1
 //
 //  Created on 26/05/17.
 //  Copyright © 2017 GrupoSB. All rights reserved.
 //
+//  Allisson Barros         12/0055619
+//  Daniel Luz              13/0007714
+//  Luiz Fernando Vieira    13/0013757
+//  Mariana Pannunzio       12/0018276
+//  Mateus Denucci          12/0053080
+
 
 #ifndef leitor_h
 #define leitor_h
@@ -14,7 +20,6 @@
 
 #include "decodificador.h"
 
-/*Defines*/
 #define CONSTANT_Class 7
 #define CONSTANT_Fieldref 9
 #define CONSTANT_Methodref 10
@@ -42,12 +47,10 @@
 
 #define NUM_INSTRUCAO 256
 
-// opcodes para instrucoes especiais
 #define TABLESWITCH 170
 #define LOOKUPSWITCH 171
 #define WIDE 196
 
-// opcodes que o wide precisa
 #define ILOAD 21
 #define FLOAD 23
 #define ALOAD 25
@@ -196,7 +199,6 @@ void leCode(FILE*, CodeAttribute**, uint16_t, uint32_t);
 uint8_t le1Byte(FILE* fp);
 uint16_t le2Bytes(FILE* fp);
 uint32_t le4Bytes(FILE* fp);
-
 void salvaInstrucoes(CodeAttribute** cd_atrb, FILE* file);
 
 #endif

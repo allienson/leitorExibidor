@@ -1,3 +1,16 @@
+//
+//  decodificador.h
+//  LeitorExibidor - Software Basico 2017-1
+//
+//  Created on 26/05/17.
+//  Copyright © 2017 GrupoSB. All rights reserved.
+//
+//  Allisson Barros         12/0055619
+//  Daniel Luz              13/0007714
+//  Luiz Fernando Vieira    13/0013757
+//  Mariana Pannunzio       12/0018276
+//  Mateus Denucci          12/0053080
+
 #ifndef decodificador_H
 #define decodificador_H
 
@@ -5,18 +18,11 @@
 
 #define NOME_INSTRUCAO 30 
 
-
-// struct para decodificar um opcode no nome da instrucao conveniente, contem tb o numero de operandos que a instrucao le  
-typedef struct Decodificador
-{
-    // nome da instrucao 
+typedef struct Decodificador {
     char instrucao[NOME_INSTRUCAO];
-
-    // numero de bytes que seguem a instrucao 
     int bytes; 
-}Decodificador; 
+} Decodificador; 
 
-// funcao que coloca o nome das strings no decodificador, juntamente com a qtd em bytes 
 void inicializaDecodificador(Decodificador dec[]);
 
 #endif 

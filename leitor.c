@@ -1,10 +1,15 @@
 //
 //  leitor.c
-//  LeitorExibidor
+//  LeitorExibidor - Software Basico 2017-1
 //
 //  Created on 26/05/17.
 //  Copyright © 2017 GrupoSB. All rights reserved.
 //
+//  Allisson Barros         12/0055619
+//  Daniel Luz              13/0007714
+//  Luiz Fernando Vieira    13/0013757
+//  Mariana Pannunzio       12/0018276
+//  Mateus Denucci          12/0053080
 
 #include "leitor.h"
 #include "exibidor.h"
@@ -19,7 +24,7 @@ ClassFile* leitorClasse(char* caminhoClasse) {
     
     if(fp == NULL) {
         printf("Erro ao abrir o arquivo (nao encontrado) ! \n");
-        return 0;
+        exit(0);
     }
 
     ClassFile* classFile = NULL;
@@ -27,6 +32,7 @@ ClassFile* leitorClasse(char* caminhoClasse) {
     
     if(classFile == NULL) {
         printf("Erro ao alocar espaço para o arquivo ! \n");
+        exit(0);
     }
 
     leClassFile(fp, classFile);
@@ -35,14 +41,13 @@ ClassFile* leitorClasse(char* caminhoClasse) {
 }
 
 void leClassFile(FILE* fp, ClassFile* classFile) {
-    if(cafeBabeValido(fp, classFile)) {
+    if(cafeBabeValido(fp, classFile)) {                 
 
         classFile->minorVersion = le2Bytes(fp);
-
         classFile->majorVersion = le2Bytes(fp);
         classFile->constantPoolCount = le2Bytes(fp);
         leConstantPool(fp, classFile);
-        
+
         classFile->accessFlags = le2Bytes(fp);
         classFile->thisClass = le2Bytes(fp);
         classFile->superClass = le2Bytes(fp);
@@ -74,7 +79,7 @@ void leConstantPool(FILE* fp, ClassFile* classFile) {
     CpInfo* cpInfo;
     
     int i = 0;
-    for(cpInfo = classFile->constantPool; i < (classFile->constantPoolCount-1); cpInfo++){
+    for(cpInfo = classFile->constantPool; i < (classFile->constantPoolCount-1); cpInfo++) {
         cpInfo->tag = le1Byte(fp);
         switch(cpInfo->tag) {
             case CONSTANT_Class:
@@ -92,7 +97,7 @@ void leConstantPool(FILE* fp, ClassFile* classFile) {
                 cpInfo->info.Utf8.length = le2Bytes(fp);
                 cpInfo->info.Utf8.bytes = (uint8_t*) calloc ((cpInfo->info.Utf8.length) + 1 ,sizeof(uint8_t));
                 fread(cpInfo->info.Utf8.bytes,1,cpInfo->info.Utf8.length,fp);
-                cpInfo->info.Utf8.bytes[cpInfo->info.Utf8.length] = '\0';
+                cpInfo->info.Utf8.bytes[cpInfo->info.Utf8.length] = '\0';               
                 break;
             case CONSTANT_Methodref:
                 cpInfo->info.Methodref.classIndex = le2Bytes(fp);
@@ -181,9 +186,7 @@ void leMethodInfo(FILE* fp, ClassFile* classFile) {
             for(int j = 0; j < methodInfo->attributesCount; j++) {
                 
                 nameIndex = le2Bytes(fp);
-                
                 attributesCount = le4Bytes(fp);
-                
                 
                 if (strcmp( (char*) classFile->constantPool[nameIndex - 1].info.Utf8.bytes, "Code") == 0) {
                     methodInfo->cdAtrb = (CodeAttribute*) malloc(sizeof(CodeAttribute));
@@ -236,8 +239,8 @@ void leCode(FILE* fp, CodeAttribute** cdAtrb, uint16_t nameIndex, uint32_t attri
     
     (*cdAtrb)->attributeNameIndex = nameIndex;
     (*cdAtrb)->attributeLength = attributesCount;
-    (*cdAtrb)->maxStack = le2Bytes(fp);                     // Ta no MISC
-    (*cdAtrb)->maxLocals = le2Bytes(fp);                    // Ta no MISC
+    (*cdAtrb)->maxStack = le2Bytes(fp);                     
+    (*cdAtrb)->maxLocals = le2Bytes(fp);                    
     (*cdAtrb)->codeLength = le4Bytes(fp);
     
     salvaInstrucoes(cdAtrb, fp);
@@ -263,234 +266,146 @@ void salvaInstrucoes(CodeAttribute** cdAtrb, FILE* file){
     int bytesPreench, offsets;
     uint32_t defaultV, low, high, npairs; 
 
-    // obtem decodificador de instrucoes 
     Decodificador dec[NUM_INSTRUCAO];
     inicializaDecodificador(dec); 
 
-    // leitura do bytecode relacionado a instrucoes do metodo 
-    // aloca espaco conveniente
-    (*cdAtrb)->code = (uint8_t*) malloc((*cdAtrb)->codeLength * \
-            sizeof(uint8_t));
+    (*cdAtrb)->code = (uint8_t*) malloc((*cdAtrb)->codeLength * sizeof(uint8_t));
 
-    // poe valor no espacos corretos
-    // incrementamos k conforme formos passando no loop
-    for(uint32_t k = 0; k < (*cdAtrb)->codeLength; ) 
-    {    
-        // le opcode da instrucao atual
+    for(uint32_t k = 0; k < (*cdAtrb)->codeLength; ) {    
         fread(&((*cdAtrb)->code[k]), 1, 1, file);
         
-        // pega opcode da instrucao
         opcode = (*cdAtrb)->code[k];
         k++; 
 
-        if (opcode == TABLESWITCH)
-        {
-            // a posicao de referencia eh o label numerico associado a tableswitch 
-            // k - 1 pois ja incrementamos o k para a proxima instrucao 
+        if (opcode == TABLESWITCH) {
             posReferencia = k - 1;
 
-            // pega bytes de preenchimento 
-            //bytesPreench = k % 4;  
             bytesPreench = (4 - (k % 4)) % 4;  
-            for (int l = 0; l < bytesPreench; l++)
-            {
+            for (int l = 0; l < bytesPreench; l++) {
                 k++; 
                 fread(&((*cdAtrb)->code[k]), 1, 1, file);
             }
 
-            // pega bytes do target default
             defaultV = 0;
-            for (int l = 0; l < 4; l++)
-            {
+            for (int l = 0; l < 4; l++) {
                 fread(&((*cdAtrb)->code[k]), 1, 1, file);
                 defaultV = (defaultV << 8) + (*cdAtrb)->code[k];   
                 k++; 
             }       
 
-            // pega bytes low
             low = 0;
-            for (int l = 0; l < 4; l++)
-            {
+            for (int l = 0; l < 4; l++) {
                 fread(&((*cdAtrb)->code[k]), 1, 1, file);
                 low = (low << 8) + (*cdAtrb)->code[k];   
                 k++; 
             }       
 
-            // pega bytes high 
             high = 0;
-            for (int l = 0; l < 4; l++)
-            {
+            for (int l = 0; l < 4; l++) {
                 fread(&((*cdAtrb)->code[k]), 1, 1, file);
                 high = (high << 8) + (*cdAtrb)->code[k];   
                 k++; 
             }       
             
-            // pega bytes de offset 
             offsets = 1 + high - low;
-            for (int l = 0; l < offsets; l++)
-            {
-                // pega valor do offset atual 
-                for (int i = 0; i < 4; i++)
-                {
+            for (int l = 0; l < offsets; l++) {
+                for (int i = 0; i < 4; i++) {
                     fread(&((*cdAtrb)->code[k]), 1, 1, file);
                     k++; 
                 }
-
             } 
-        }
-
-        else if (opcode == LOOKUPSWITCH)
-        {
-            // a posicao de referencia eh o label numerico associado a tableswitch 
-            // k - 1 pois ja incrementamos o k para a proxima instrucao 
+        } else if (opcode == LOOKUPSWITCH) {
             posReferencia = k - 1;
 
-            // pega bytes de preenchimento - nao salva em nenhum lugar
-            //bytesPreench = k % 4;  
             bytesPreench = (4 - (k % 4)) % 4;  
-            for (int l = 0; l < bytesPreench; l++)
-            {
-                k++; 
+            for (int l = 0; l < bytesPreench; l++) {
+                k++;            
                 fread(&((*cdAtrb)->code[k]), 1, 1, file);
             }
 
-            // pega bytes do target default
             defaultV = 0;
-            for (int l = 0; l < 4; l++)
-            {
+            for (int l = 0; l < 4; l++) {
                 fread(&((*cdAtrb)->code[k]), 1, 1, file);
                 defaultV = (defaultV << 8) + (*cdAtrb)->code[k];   
                 k++; 
             }       
 
-            // pega npairs
             npairs = 0;
-            for (int l = 0; l < 4; l++)
-            {
+            for (int l = 0; l < 4; l++) {
                 fread(&((*cdAtrb)->code[k]), 1, 1, file);
                 npairs = (npairs << 8) + (*cdAtrb)->code[k];   
                 k++; 
             }       
 
-            // pega npairs 
-            for (uint32_t l = 0; l < npairs; l++)
-            {
-                // pega valor do match atual 
-                for (int i = 0; i < 4; i++)
-                {
+            for (uint32_t l = 0; l < npairs; l++) {
+                for (int i = 0; i < 4; i++) {
                     fread(&((*cdAtrb)->code[k]), 1, 1, file);
                     k++; 
                 }
 
-                // pega valor do offset 
-                for (int i = 0; i < 4; i++)
-                {
+                for (int i = 0; i < 4; i++) {
                     fread(&((*cdAtrb)->code[k]), 1, 1, file);
                     k++; 
                 }
-
             } 
+        } else if (opcode == WIDE) {
 
-        }
-
-        else if (opcode == WIDE)
-        {
-
-            // pega opcode que segue
             fread(&((*cdAtrb)->code[k]), 1, 1, file);
             opcode = (*cdAtrb)->code[k];
             k++; 
 
-            // se o opcode for um iload, fload, ...
-            if (opcode == ILOAD || opcode == FLOAD || opcode == ALOAD || opcode == LLOAD || \
-                    opcode == DLOAD || opcode == ISTORE || opcode == FSTORE || opcode == ASTORE || \
-                    opcode == LSTORE || opcode == DSTORE || opcode == RET)
-            {
-                // pega index byte1 
+            if (opcode == ILOAD || opcode == FLOAD || opcode == ALOAD || opcode == LLOAD || 
+                opcode == DLOAD || opcode == ISTORE || opcode == FSTORE || opcode == ASTORE || 
+                opcode == LSTORE || opcode == DSTORE || opcode == RET) { // mneRmonicos
+
                 fread(&((*cdAtrb)->code[k]), 1, 1, file);
                 k++; 
 
-                // pega index byte2
                 fread(&((*cdAtrb)->code[k]), 1, 1, file);
                 k++; 
-            }
+            } else if (opcode == IINC) {
 
-            // se for um iinc 
-            else if (opcode == IINC)
-            {
-
-                // pega indexbyte1
                 fread(&((*cdAtrb)->code[k]), 1, 1, file);
                 k++; 
 
-                // pega indexbyte2
                 fread(&((*cdAtrb)->code[k]), 1, 1, file);
                 k++; 
 
-                // pega constbyte1
                 fread(&((*cdAtrb)->code[k]), 1, 1, file);
                 k++; 
 
-                // pega constbyte2
                 fread(&((*cdAtrb)->code[k]), 1, 1, file);
                 k++; 
-
-            }
-
-            // senao
-            else
-            { 
-                // arquivo .class corrompido! 
+            } else { 
                 printf("arquivo .class invalido na instrucao wide");
                 exit(1);
             }
-        }
-
-        else
-        {
-
-            // obtem quantos operandos a instrucao tem e vai lendo operandos
+        } else {
             int num_bytes = dec[opcode].bytes;
-            for (int l = 0; l < num_bytes; l++)
-            {
-
-                // pega operando 
+            for (int l = 0; l < num_bytes; l++) {
                 fread(&((*cdAtrb)->code[k]), 1, 1, file);
-                // atualiza valor de k 
                 k++;
             }
-
         }
     }
 }
 
-
-
 uint8_t le1Byte(FILE* fp) {
-    uint8_t retorno = getc(fp);
-    //uint8_t retorno;
-    //fread(&retorno, sizeof(uint8_t), 1, fp); 
-    
-    return retorno;
+    uint8_t byte = getc(fp); 
+    return byte;
 }
 
 uint16_t le2Bytes(FILE* fp) {
-    uint16_t retorno = getc(fp);
-    retorno = (retorno << 8) | (getc(fp));
-    
-    //uint16_t retorno;
-    //fread(&retorno, sizeof(uint16_t), 1, fp);
-    return retorno;
+    uint16_t bytes = getc(fp);
+    bytes = (bytes << 8) | (getc(fp));
+    return bytes;
 }
 
 uint32_t le4Bytes(FILE* fp) {
-    uint32_t retorno = getc(fp);
-    retorno = (retorno << 8) | (getc(fp));
-    retorno = (retorno << 8) | (getc(fp));
-    retorno = (retorno << 8) | (getc(fp));
-    
-    //uint32_t retorno;
-    //fread(&retorno, sizeof(uint32_t), 1, fp);   /* TRETA COM LITTLE ENDIAN */
-    return retorno;
+    uint32_t bytes = getc(fp);
+    bytes = (bytes << 8) | (getc(fp));
+    bytes = (bytes << 8) | (getc(fp));
+    bytes = (bytes << 8) | (getc(fp));
+    return bytes;
 }
 

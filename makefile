@@ -1,6 +1,5 @@
-# sample makefile
 CC = gcc
-CFLAGS = -m32 -std=c99
+CFLAGS = -m32 -std=c99 
 OUTFILE = LeitorExibidor
 OBJS = exibidor.o leitor.o decodificador.o main.o
 SRCS = exibidor.c leitor.c decodificador.c main.c
